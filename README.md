@@ -6,7 +6,7 @@ Implementation of [LARGE BATCH TRAINING OF CONVOLUTIONAL NETWORKS](https://arxiv
 
 ## Lamb
 
-Implementation of [LARGEBATCHOPTIMIZATIONFORDEEPLEARNING: TRAININGBERTIN76MINUTES](https://arxiv.org/abs/1904.00962) for large batch, large learning rate training.
+Implementation of [LARGE BATCH OPTIMIZATION FOR DEEP LEARNING: TRAINING BERT IN 76 MINUTES](https://arxiv.org/abs/1904.00962) for large batch, large learning rate training.
 
 ## Environment
 
