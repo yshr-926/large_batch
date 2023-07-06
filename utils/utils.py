@@ -92,7 +92,7 @@ def get_transforms(model, dataset):
 
 def get_dataset(dataset, transform_train, transform_test):
     if dataset == 'ImageNet':
-        trainset = datasets.ImageNet(root='./dataset/imagenet', split='val', transform=transform_train)
+        trainset = datasets.ImageNet(root='./dataset/imagenet', split='train', transform=transform_train)
         testset = datasets.ImageNet(root='./dataset/imagenet', split='val', transform=transform_test)
     elif dataset == 'TinyImageNet':
         trainset = datasets.ImageFolder(root='./dataset/tiny-imagenet-200/train', transform=transform_train)

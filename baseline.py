@@ -14,14 +14,15 @@ import torch.optim as optim
 from torch.nn import functional as F
 from utils.utils import get_model, get_transforms, get_dataset
 
-        
+from optimizers import *
+
 parser = argparse.ArgumentParser(description='PyTorch Training')
 parser.add_argument('--batch_size', default=128, type=int)
 parser.add_argument('--num_worker', default=8, type=int, help='number of workers')
 parser.add_argument('--start_epoch', default=0, type=int)
 parser.add_argument('--epoch', default=200, type=int)
 parser.add_argument('--lr', default=0.1, type=float)
-parser.add_argument('--momentum', default=0.0, type=float)
+parser.add_argument('--momentum', default=0.9, type=float)
 parser.add_argument('--weight_decay', default=5e-3, type=float)
 parser.add_argument('--optimizer',default='SGD',type=str,help='SGD/SAM/NSAM')
 parser.add_argument('--model',default='ResNet18',type=str)
