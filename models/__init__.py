@@ -1,5 +1,6 @@
 from .resnet import *
 from .wide_resnet import *
+from .alexnetbn import *
 # from .shake_resnext import *
 # from .shake_pyramidnet import *
 # from .mobilenetv2 import *
