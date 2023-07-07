@@ -30,6 +30,10 @@ def get_model(model, num_class, dataset):
         return models.__dict__['WRN28_2'](num_classes=num_class)
     elif model == 'WideResNet28-10':
         return models.__dict__['WRN28_10'](num_classes=num_class)
+    elif model == 'AlexNet':
+        return models.__dict__['AlexNetOrigin'](num_classes=num_class)
+    elif model == 'AlexNetBN':
+        return models.__dict__[model](num_classes=num_class)
     # elif model == 'PyramidNet':
     #     return models.__dict__['Pyramid'](num_classes=num_class)
     # elif model == 'ShakeResNeXt':
@@ -44,14 +48,30 @@ def get_model(model, num_class, dataset):
         # return torchvision.models.__dict__[model].from_name('efficientnet-b7', num_classes=num_class)
 
 def get_transforms(model, dataset):
-    if dataset == 'ImageNet':
+    if model == 'AlexNetBN':
         transform_train = transforms.Compose([
+            transforms.Resize((256, 256), interpolation=transforms.InterpolationMode.BICUBIC),
+            transforms.RandomCrop(224, padding=28),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            # batch_Cutout(n_holes=1, length=16),
+        ])
+        transform_test = transforms.Compose([
             transforms.Resize((224, 224), interpolation=transforms.InterpolationMode.BICUBIC),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+        return transform_train, transform_test
+    
+    if dataset == 'ImageNet':
+        transform_train = transforms.Compose([
+            transforms.Resize((224, 224), interpolation=transforms.InterpolationMode.BICUBIC),
             transforms.RandomCrop(224, padding=28),
             transforms.RandomHorizontalFlip(),
-            batch_Cutout(n_holes=1, length=16),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            # batch_Cutout(n_holes=1, length=16),
         ])
         transform_test = transforms.Compose([
             transforms.Resize((224, 224), interpolation=transforms.InterpolationMode.BICUBIC),
@@ -76,11 +96,11 @@ def get_transforms(model, dataset):
 
     elif dataset == 'CIFAR100' or 'CIFAR10':
         transform_train = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[x / 255.0 for x in[125.3, 123.0, 113.9]], std=[x / 255.0 for x in [63.0, 62.1, 66.7]]),
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
-            batch_Cutout(n_holes=1, length=16),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[x / 255.0 for x in[125.3, 123.0, 113.9]], std=[x / 255.0 for x in [63.0, 62.1, 66.7]]),
+            # batch_Cutout(n_holes=1, length=16),
         ])
         transform_test = transforms.Compose([
             transforms.ToTensor(),
