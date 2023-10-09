@@ -16,8 +16,15 @@ Inplementation of [Sharpness-Aware Minimization for Efficiently Improving Genera
 
 If you want to use the SGD optimizer,
 ```bash
-python baseline.py --epoch 200 --lr 0.1 --model ResNet50 --dataset CIFAR100 --optimizer SGD
+python baseline.py
 ```
+
+If you want to use the SAM optimizer,
+```bash
+python train_sam.py
+```
+
+Both trainings utilize the Stochastic Weight Averaging (SWA) technique implemented in Pyotrch.
 
 ## Environment
 
