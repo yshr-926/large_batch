@@ -8,7 +8,7 @@ Inplementation of [Large batch training of convolutional networks](https://arxiv
 
 Inplementation of [Large Batch Optimization for Deep Learning: Training BERT in 76 minutes](https://arxiv.org/abs/1904.00962).
 
-## Lamb
+## Sharpness-Aware Minimization(SAM)
 
 Inplementation of [Sharpness-Aware Minimization for Efficiently Improving Generalization](https://arxiv.org/abs/2010.01412).
 
