@@ -4,46 +4,52 @@ import sys
 import os
 import time
 from datetime import datetime, timedelta, timezone
-import datetime
 from tqdm import tqdm
 import torch
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.optim.lr_scheduler import MultiStepLR
+from torch.optim.lr_scheduler import PolynomialLR
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 from torch.nn import functional as F
-from utils.utils import get_model, get_transforms, get_dataset
-
+from utils.utils import get_model, get_transforms, get_dataset, print_header
 from optimizers import *
 
+from torch.optim.swa_utils import AveragedModel
+
 parser = argparse.ArgumentParser(description='PyTorch Training')
+parser.add_argument('--gpu', default='0', type=str)
+parser.add_argument('--log', action='store_false', default=True, help='save log')
 parser.add_argument('--batch_size', default=128, type=int)
 parser.add_argument('--num_worker', default=8, type=int, help='number of workers')
 parser.add_argument('--start_epoch', default=0, type=int)
 parser.add_argument('--epoch', default=200, type=int)
 parser.add_argument('--lr', default=0.1, type=float)
 parser.add_argument('--momentum', default=0.9, type=float)
-parser.add_argument('--weight_decay', default=5e-3, type=float)
-parser.add_argument('--optimizer',default='SGD',type=str,help='SGD/SAM/NSAM')
+parser.add_argument('--weight_decay', default=5e-4, type=float)
+parser.add_argument('--optimizer',default='SGD',type=str,help='SGD')
 parser.add_argument('--model',default='ResNet18',type=str)
 parser.add_argument('--milestones', default=[60, 120, 160], nargs='*', type=int, help='milestones of scheduler')
 parser.add_argument('--dataset',default='CIFAR10',type=str)
 parser.add_argument('--lr_decay',default=0.2,type=float)
 parser.add_argument('--lr_type',default='MultiStepLR',type=str)
 parser.add_argument('--eta_min',default=0.00,type=float)
+# for Averaging
+parser.add_argument('--start_averaged', default=160, type=int)
 
+parser.add_argument('--saving-folder', default='checkpoints/', type=str, help='choose saving name')
 
 args = parser.parse_args()
 
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+
 # 出力先を標準出力orファイルで選択
-log = True
-if log is True:
-    today = datetime.date.today()
-    log_dir = './logs/{}/{}/{}'.format(args.dataset, args.model, today)
-    if not os.path.exists(log_dir):
-        os.mkdir(log_dir)
-    now = datetime.datetime.now(timezone(timedelta(hours=+9))).strftime("%H%M")
-    logpath = log_dir+'/base-{}-{}-{}.txt'.format(now, args.dataset, args.model)
+if args.log is True:
+    today = datetime.now(timezone(timedelta(hours=+9))).strftime("%Y-%m-%d")
+    log_dir = f"./logs/{args.dataset}/{args.model}/{today}/SGD"
+    os.makedirs(log_dir, exist_ok=True)
+    now = datetime.now(timezone(timedelta(hours=+9))).strftime("%H%M")
+    logpath = log_dir+f"/{now}-{args.epoch}-{args.lr_type}-{args.weight_decay:.0e}.log"
     sys.stdout = open(logpath, "w") # 表示内容の出力をファイルに変更
 
 print(' '.join(sys.argv))
@@ -60,6 +66,7 @@ print('milestones:', args.milestones)
 print('weight_decay:',args.weight_decay)
 print('momentum:', args.momentum)
 print('eta_min:',args.eta_min)
+print('start_averaged:',args.start_averaged)
 
 use_cuda = torch.cuda.is_available()
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -75,10 +82,14 @@ num_class = len(trainset.classes)
 #define model
 print('==> Building model..')
 model = get_model(args.model, num_class, args.dataset)
+model = torch.nn.DataParallel(model)
+averaged_model = AveragedModel(model)
 if use_cuda:
+    torch.cuda.empty_cache()
     model.to(device)
-    model = torch.nn.DataParallel(model)
-    cudnn.benchmark = True    
+    averaged_model.to(device)
+    cudnn.benchmark = True
+print('==> Finish model')
 
 #lr decay milestones
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
@@ -93,8 +104,9 @@ def train(epoch):
     torch.cuda.synchronize()
     time_ep = time.time()
     model.train()
+    averaged_model.train()
     train_loss = 0.0
-    correct = 0.0    
+    correct = 0   
     total = 0
 
     for batch_idx, (input, target) in enumerate(trainloader):
@@ -102,16 +114,24 @@ def train(epoch):
         input, target = input.to(device), target.to(device)
         
         output = model(input)
-        _, pred = torch.max(output, 1)
-        correct += pred.eq(target).sum()
         total += input_size
         loss = criterion(output, target)
-        train_loss += loss.item()
-
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
+        # update Averaged model
+        if epoch >= args.start_averaged:
+            averaged_model.update_parameters(model)
+
+        with torch.no_grad():
+            train_loss += loss.item()
+            _, pred = torch.max(output, 1)
+            correct += pred.eq(target).sum()
+
+    if epoch >= args.start_averaged:
+        torch.optim.swa_utils.update_bn(trainloader, averaged_model, optimizer.param_groups[0]["params"][0].device)
+    
     torch.cuda.synchronize()   
     time_ep = time.time() - time_ep
 
@@ -119,35 +139,54 @@ def train(epoch):
 
 def test(epoch, model):
     model.eval()
+    averaged_model.eval()
     total = 0
 
     test_loss = 0.0
     test_correct = 0
-
+    ave_test_loss = 0.0
+    ave_test_correct = 0.0
+    
     with torch.no_grad():
         for batch_idx, (input, target) in enumerate(testloader):
             input_size = input.size()[0]
             input, target = input.to(device), target.to(device)   
+            # normal test
             output = model(input)
             loss = criterion(output, target)
             test_loss += loss.item()
             _, pred = torch.max(output, 1)
             test_correct += pred.eq(target).sum()
+            # averaged test
+            if epoch >= args.start_averaged:
+                ave_output = averaged_model(input)
+                loss = criterion(ave_output, target)
+                ave_test_loss += loss.item()
+                _, pred = torch.max(ave_output, 1)
+                ave_test_correct += pred.eq(target).sum()
             total += input_size
-
-    return test_loss/batch_idx, 100*test_correct/total
+    return test_loss/batch_idx, 100*test_correct/total, ave_test_loss/batch_idx, 100*ave_test_correct/total
 
 total_time = 0
 for epoch in range(args.start_epoch, args.epoch):
+    if epoch == 0:
+        print_header()
     train_loss, train_acc, time_ep = train(epoch)
     total_time += time_ep
-    scheduler.step()
-    test_loss, test_acc = test(epoch, model)
-    print("| epoch : {} | lr : {:.7f} | train_loss : {:.5f} | train_acc : {:.2f} | test_loss : {:.5f} | test_acc : {:.2f}| time : {:.3f}" \
-          .format(epoch+1, optimizer.param_groups[0]['lr'], train_loss, train_acc, test_loss, test_acc, time_ep))
+    if not args.lr_type == "fixed":
+        scheduler.step()
+    lr_ = optimizer.param_groups[0]['lr']
+    test_loss, test_acc, ave_loss, ave_acc = test(epoch, model)
+    print(f"┃{epoch:12d}  ┃{lr_:12.4f}  │{time_ep:12.3f}  ┃{train_loss:12.4f}  │{train_acc:10.2f} %  "\
+          f"┃{test_loss:12.4f}  │{test_acc:10.2f} %  ┃{ave_loss:12.4f}  │{ave_acc:10.2f} %  ┃")
 
-print('Total {:.0f}:{:.0f}:{:.0f}'.format(total_time//3600, total_time%3600//60, total_time%3600%60))
+save_model = True
+if save_model:
+    torch.save(model.state_dict(), f'{args.saving_folder}{args.model}_{args.dataset}_{args.optimizer}_{args.momentum}_{args.weight_decay}.pkl')
 
+print(f'Total {total_time//3600:.0f}:{total_time%3600//60:02.0f}:{total_time%3600%60:02.0f}')
+print(f"Memory used: {torch.cuda.max_memory_reserved() / 1e9:.02f} GB")
 # ファイルを閉じて標準出力を元に戻す
-sys.stdout.close()
-sys.stdout = sys.__stdout__
+if args.log is True:
+    sys.stdout.close()
+    sys.stdout = sys.__stdout__
