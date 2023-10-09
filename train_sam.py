@@ -13,7 +13,7 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 from torch.nn import functional as F
 from utils.utils import get_model, get_transforms, get_sam_transform, get_dataset, smooth_crossentropy, print_header
-from utils.utils_sum import enable_running_stats, disable_running_stats
+from utils.utils_sam import enable_running_stats, disable_running_stats
 from optimizers import *
 
 from torch.optim.swa_utils import AveragedModel
