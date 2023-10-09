@@ -12,32 +12,33 @@ from torch.optim.lr_scheduler import PolynomialLR
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 from torch.nn import functional as F
-from utils.utils import get_model, get_transforms, get_dataset, print_header
+from utils.utils import get_model, get_optimizer, get_transforms, get_dataset, print_header
 from optimizers import *
 
 from torch.optim.swa_utils import AveragedModel
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
-parser.add_argument('--gpu', default='0', type=str)
+parser.add_argument('--gpu', default='0', type=str,help='GPU number')
 parser.add_argument('--log', action='store_false', default=True, help='save log')
-parser.add_argument('--batch_size', default=128, type=int)
+parser.add_argument('--batch_size', default=128, type=int,help='minibatch size')
 parser.add_argument('--num_worker', default=8, type=int, help='number of workers')
 parser.add_argument('--start_epoch', default=0, type=int)
-parser.add_argument('--epoch', default=200, type=int)
-parser.add_argument('--lr', default=0.1, type=float)
+parser.add_argument('--epoch', default=200, type=int,help='epoch')
+parser.add_argument('--lr', default=0.1, type=float,help='learning rate')
 parser.add_argument('--momentum', default=0.9, type=float)
 parser.add_argument('--weight_decay', default=5e-4, type=float)
-parser.add_argument('--optimizer',default='SGD',type=str,help='SGD')
-parser.add_argument('--model',default='ResNet18',type=str)
+parser.add_argument('--optimizer',default='SGD',type=str,help='optimizer')
+parser.add_argument('--model',default='ResNet18',type=str,help='model')
 parser.add_argument('--milestones', default=[60, 120, 160], nargs='*', type=int, help='milestones of scheduler')
 parser.add_argument('--dataset',default='CIFAR10',type=str)
 parser.add_argument('--lr_decay',default=0.2,type=float)
-parser.add_argument('--lr_type',default='MultiStepLR',type=str)
-parser.add_argument('--eta_min',default=0.00,type=float)
+parser.add_argument('--lr_type',default='MultiStepLR',type=str,help='learning rate scheduler')
+parser.add_argument('--eta_min',default=0.00,type=float,help='minimum lerning rate')
 # for Averaging
 parser.add_argument('--start_averaged', default=160, type=int)
-
+# save model
 parser.add_argument('--saving-folder', default='checkpoints/', type=str, help='choose saving name')
+parser.add_argument('--save_model', action='store_true', default=False, help='save model')
 
 args = parser.parse_args()
 
@@ -92,7 +93,7 @@ if use_cuda:
 print('==> Finish model')
 
 #lr decay milestones
-optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+optimizer = get_optimizer(args, model)
 if args.lr_type == 'MultiStepLR':
     scheduler = eval(args.lr_type)(optimizer=optimizer, milestones=args.milestones, gamma=args.lr_decay)
 elif args.lr_type == 'CosineAnnealingLR':
@@ -180,8 +181,7 @@ for epoch in range(args.start_epoch, args.epoch):
     print(f"┃{epoch:12d}  ┃{lr_:12.4f}  │{time_ep:12.3f}  ┃{train_loss:12.4f}  │{train_acc:10.2f} %  "\
           f"┃{test_loss:12.4f}  │{test_acc:10.2f} %  ┃{ave_loss:12.4f}  │{ave_acc:10.2f} %  ┃")
 
-save_model = True
-if save_model:
+if args.save_model:
     torch.save(model.state_dict(), f'{args.saving_folder}{args.model}_{args.dataset}_{args.optimizer}_{args.momentum}_{args.weight_decay}.pkl')
 
 print(f'Total {total_time//3600:.0f}:{total_time%3600//60:02.0f}:{total_time%3600%60:02.0f}')
