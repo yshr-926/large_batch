@@ -54,7 +54,7 @@ if args.log is True:
     log_dir = f"./logs/{args.dataset}/{args.model}/{today}/SAM"
     os.makedirs(log_dir, exist_ok=True)
     now = datetime.now(timezone(timedelta(hours=+9))).strftime("%H%M")
-    logpath = log_dir+f"/{now}-{args.epoch}-{args.lr_type}-{args.weight_decay:.0e}.log"
+    logpath = log_dir+f"/{now}-{args.epoch}-{args.start_averaged}-{args.eta_min}-{args.weight_decay:.0e}-{args.label_smoothing}-{args.lr_type}-{args.rho}.log"
     sys.stdout = open(logpath, "w") # 表示内容の出力をファイルに変更
 
 print(' '.join(sys.argv))
@@ -207,6 +207,8 @@ def test(epoch, model):
     return test_loss/batch_idx, 100*test_correct/total, ave_test_loss/batch_idx, 100*ave_test_correct/total
 
 total_time = 0
+acc_list = []
+avg_acc_list = []
 for epoch in range(args.start_epoch, args.epoch):
     if epoch == 0:
         print_header()
@@ -216,10 +218,14 @@ for epoch in range(args.start_epoch, args.epoch):
         scheduler.step()
     lr_ = optimizer.param_groups[0]['lr']
     test_loss, test_acc, ave_loss, ave_acc = test(epoch, model)
+    acc_list.append(test_acc)
+    avg_acc_list.append(ave_acc)
     print(f"┃{epoch:12d}  ┃{lr_:12.4f}  │{time_ep:12.3f}  ┃{train_loss:12.4f}  │{train_acc:10.2f} %  "\
           f"┃{test_loss:12.4f}  │{test_acc:10.2f} %  ┃{ave_loss:12.4f}  │{ave_acc:10.2f} %  ┃")
     # print(f"| epoch : {epoch:3d} | lr : {lr_:.4f} | train_loss : {train_loss:.5f} | train_acc : {train_acc:5.2f} | test_loss : {test_loss:.5f} | test_acc : {test_acc:5.2f} | time : {time_ep:.3f}")
 
+print(f'Best accurasy: {max(acc_list):.2f}')
+print(f'Best averaged accurasy: {max(avg_acc_list):.2f}')
 print(f'Total {total_time//3600:.0f}:{total_time%3600//60:02.0f}:{total_time%3600%60:02.0f}')
 print(f"Memory used: {torch.cuda.max_memory_reserved() / 1e9:.02f} GB")
 # ファイルを閉じて標準出力を元に戻す
