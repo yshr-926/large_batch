@@ -51,7 +51,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 # 出力先を標準出力orファイルで選択
 if args.log is True:
     today = datetime.now(timezone(timedelta(hours=+9))).strftime("%Y-%m-%d")
-    log_dir = f"./logs/{args.dataset}/{args.model}/{today}/SAM"
+    log_dir = f"./logs/{args.dataset}/{args.model}/{today}/SAM3"
     os.makedirs(log_dir, exist_ok=True)
     now = datetime.now(timezone(timedelta(hours=+9))).strftime("%H%M")
     logpath = log_dir+f"/{now}-{args.epoch}-{args.start_averaged}-{args.eta_min}-{args.weight_decay:.0e}-{args.label_smoothing}-{args.lr_type}-{args.rho}.log"
