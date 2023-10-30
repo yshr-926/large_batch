@@ -54,7 +54,7 @@ if args.log is True:
     log_dir = f"./logs/{args.dataset}/{args.model}/{today}/SAM"
     os.makedirs(log_dir, exist_ok=True)
     now = datetime.now(timezone(timedelta(hours=+9))).strftime("%H%M")
-    logpath = log_dir+f"/{now}-{args.epoch}-{args.start_averaged}-{args.eta_min}-{args.weight_decay:.0e}-{args.label_smoothing}-{args.lr_type}-{args.rho}.log"
+    logpath = log_dir+f"/{now}-{args.epoch}-{args.start_averaged}-{args.batch_size}-{args.eta_min}-{args.momentum}-{args.weight_decay:.0e}-{args.label_smoothing}-{args.lr_type}-{args.rho}.log"
     sys.stdout = open(logpath, "w") # 表示内容の出力をファイルに変更
 
 print(' '.join(sys.argv))
@@ -144,6 +144,10 @@ def train(epoch):
         # loss.backward()
 
         # use smooth_crossentropy()
+
+        # 必要？
+        optimizer.zero_grad()
+        
         loss.mean().backward()
 
         optimizer.first_step(zero_grad=True)
