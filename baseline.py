@@ -169,6 +169,8 @@ def test(epoch, model):
     return test_loss/batch_idx, 100*test_correct/total, ave_test_loss/batch_idx, 100*ave_test_correct/total
 
 total_time = 0
+acc_list = []
+avg_acc_list = []
 for epoch in range(args.start_epoch, args.epoch):
     if epoch == 0:
         print_header()
@@ -178,12 +180,16 @@ for epoch in range(args.start_epoch, args.epoch):
         scheduler.step()
     lr_ = optimizer.param_groups[0]['lr']
     test_loss, test_acc, ave_loss, ave_acc = test(epoch, model)
+    acc_list.append(test_acc)
+    avg_acc_list.append(ave_acc)
     print(f"┃{epoch:12d}  ┃{lr_:12.4f}  │{time_ep:12.3f}  ┃{train_loss:12.4f}  │{train_acc:10.2f} %  "\
           f"┃{test_loss:12.4f}  │{test_acc:10.2f} %  ┃{ave_loss:12.4f}  │{ave_acc:10.2f} %  ┃")
 
 if args.save_model:
     torch.save(model.state_dict(), f'{args.saving_folder}{args.model}_{args.dataset}_{args.optimizer}_{args.momentum}_{args.weight_decay}.pkl')
 
+print(f'Best accurasy: {max(acc_list):.2f}')
+print(f'Best averaged accurasy: {max(avg_acc_list):.2f}')
 print(f'Total {total_time//3600:.0f}:{total_time%3600//60:02.0f}:{total_time%3600%60:02.0f}')
 print(f"Memory used: {torch.cuda.max_memory_reserved() / 1e9:.02f} GB")
 # ファイルを閉じて標準出力を元に戻す
