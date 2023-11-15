@@ -111,12 +111,12 @@ class SAM2(torch.optim.Optimizer):
         if zero_grad: self.zero_grad()                
 
 
-class SAM3(torch.optim.Optimizer):
+class SAM_L2(torch.optim.Optimizer):
     def __init__(self, params, base_optimizer=torch.optim.SGD, rho=0.05, adaptive=False, **kwargs):
         assert rho >= 0.0, f"Invalid rho, should be non-negative: {rho}"
 
         defaults = dict(rho=rho, adaptive=adaptive, **kwargs)
-        super(SAM3, self).__init__(params, defaults)
+        super(SAM_L2, self).__init__(params, defaults)
 
         self.base_optimizer = base_optimizer(self.param_groups, **kwargs)
         self.param_groups = self.base_optimizer.param_groups
