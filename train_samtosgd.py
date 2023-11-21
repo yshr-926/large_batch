@@ -52,10 +52,10 @@ os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 # 出力先を標準出力orファイルで選択
 if args.log is True:
     today = datetime.now(timezone(timedelta(hours=+9))).strftime("%Y-%m-%d")
-    log_dir = f"./logs/{args.dataset}/{args.model}/{today}/SAM"
+    log_dir = f"./logs/{args.dataset}/{args.model}/{today}/SAMtoSGD"
     os.makedirs(log_dir, exist_ok=True)
     now = datetime.now(timezone(timedelta(hours=+9))).strftime("%H%M")
-    logpath = log_dir+f"/{now}-{args.epoch}-{args.start_averaged}-{args.batch_size}-{args.eta_min}-{args.momentum}-{args.weight_decay:.0e}-{args.label_smoothing}-{args.lr_type}-{args.rho}.log"
+    logpath = log_dir+f"/{now}-{args.epoch}-{args.start_averaged}-{args.batch_size}-{args.eta_min}-{args.momentum}-{args.weight_decay:.0e}-{args.label_smoothing}-{args.lr_type}-{args.rho}-{args.chenge_optim}.log"
     sys.stdout = open(logpath, "w") # 表示内容の出力をファイルに変更
 
 print(' '.join(sys.argv))
@@ -131,18 +131,17 @@ def train(epoch):
     correct = 0.0    
     total = 0
 
-    flag = False
-    if epoch > args.epoch*args.chenge_optim and flag is False:
+    # flag = False
+    if epoch == args.epoch*args.chenge_optim:
         enable_running_stats(model)
         print("Change Optimizer")
-        flag = True
 
     for batch_idx, (input, target) in enumerate(trainloader):
         input_size = input.size()[0]
         input, target = input.to(device), target.to(device)
 
         # first forward-backward pass
-        if epoch <= args.epoch*args.chenge_optim:
+        if epoch < args.epoch*args.chenge_optim:
             enable_running_stats(model)
             output = model(input)
             total += input_size
