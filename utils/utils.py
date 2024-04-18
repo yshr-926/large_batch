@@ -45,11 +45,11 @@ class MyBatchSampler(BatchSampler):
         yield batch[:idx_in_batch]*self.aug_size
 
 def get_model(model, num_class, dataset):
-    if 'ResNet' in model:
+    if model.startswith('ResNet'):
         resnet_number = int(model[6:])
         assert resnet_number in [18, 34, 50, 101, 152], f"Invalid ResNet model number: {resnet_number}"
         return models.__dict__[model](num_classes=num_class, dataset=dataset)
-    elif model == 'WideResNet28-10':
+    elif model == 'WideResNet28x10':
         return models.__dict__['WRN28_10'](num_classes=num_class)
     elif model == 'PyramidNet':
         return models.__dict__['Pyramid'](num_classes=num_class)
@@ -57,11 +57,11 @@ def get_model(model, num_class, dataset):
         return models.__dict__['ShakePyramidNet272_200'](num_classes=num_class)
     elif model == 'ShakeWideResNet':
         return models.__dict__[model](depth=28, width_factor=10, dropout=0.0, in_channels=3, num_classes=num_class)
-    elif model == 'ShakeShake26-32':
+    elif model == 'ShakeShake26x32':
         return models.__dict__['ShakeShake26_2x32d'](num_classes=num_class)
-    elif model == 'ShakeShake26-64':
+    elif model == 'ShakeShake26x64':
         return models.__dict__['ShakeShake26_2x64d'](num_classes=num_class)
-    elif model == 'ShakeShake26-96':
+    elif model == 'ShakeShake26x96':
         return models.__dict__['ShakeShake26_2x96d'](num_classes=num_class)
 
 def get_optimizer(args, model):
