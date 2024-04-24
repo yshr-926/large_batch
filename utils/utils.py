@@ -10,6 +10,7 @@ import torchvision.transforms as transforms
 from utils.batch_cutout import batch_Cutout
 from utils.cutout_sam import Cutout_Sam
 from optimizers import *
+import copy
 
 class DatasetWithIndex:
     def __init__(self, dataset):
@@ -127,10 +128,11 @@ def get_transforms(dataset, train_policy, test_policy):
             
             if i == 0:
                 transform_train = transforms.Compose(transform_list)
+                transform_tta = transforms.Compose(transform_list)
             elif i == 1:
                 transform_test = transforms.Compose(transform_list)
 
-    return transform_train, transform_test
+    return transform_train, transform_test, transform_tta
 
 def get_sam_transform(dataset):
     train_set = datasets.__dict__[dataset](root='./data', train=True, download=True, transform=transforms.ToTensor())
@@ -151,7 +153,7 @@ def get_sam_transform(dataset):
     ])
     return train_transform, test_transform
 
-def get_dataset(dataset, transform_train, transform_test):
+def get_dataset(dataset, transform_train, transform_test, transform_tta):
     if dataset == 'ImageNet':
         trainset = datasets.ImageNet(root='./dataset/imagenet', split='train', transform=transform_train)
         testset = datasets.ImageNet(root='./dataset/imagenet', split='val', transform=transform_test)
@@ -161,8 +163,27 @@ def get_dataset(dataset, transform_train, transform_test):
     elif dataset == 'CIFAR10' or 'CIFAR100':
         trainset = datasets.__dict__[dataset](root='./data', train=True, download=True, transform=transform_train)
         testset = datasets.__dict__[dataset](root='./data', train=False, download=False, transform=transform_test)
+        ttaset = datasets.__dict__[dataset](root='./data', train=False, download=False, transform=transform_tta)
 
-    return trainset, testset
+    return trainset, testset, ttaset
+
+def get_dataset_val(dataset, transform_train, transform_test, transform_tta):
+    if dataset == 'ImageNet':
+        trainset = datasets.ImageNet(root='../dataset/imagenet', split='val', transform=transform_train)
+        testset = datasets.ImageNet(root='../dataset/imagenet', split='val', transform=transform_test)
+    elif dataset == 'CIFAR10' or 'CIFAR100':
+        trainset = datasets.__dict__[dataset](root='./data', train=True, download=True, transform=None)
+        # データセットの分割
+        train_size = int(0.8 * len(trainset))
+        valid_size = len(trainset) - train_size
+        trainset, valset = torch.utils.data.random_split(trainset, [train_size, valid_size])
+        ttaset = copy.deepcopy(valset)
+        # データ拡張
+        trainset.dataset.transform = transform_train
+        valset.dataset.transform = transform_test
+        ttaset.dataset.transform = transform_tta
+
+    return trainset, valset, ttaset
 
 def smooth_crossentropy(pred, gold, smoothing=0.1):
     n_class = pred.size(1)
