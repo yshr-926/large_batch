@@ -104,6 +104,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 transform_train, transform_test, transform_tta = get_transforms(args.dataset, args.train_policy, args.test_policy)
 print('train_transform:', transform_train)
 print('test_transform:', transform_test)
+print('tta_transform:', transform_tta)
 
 trainset, testset, ttaset = get_dataset(args.dataset, transform_train, transform_test, transform_tta)
 
