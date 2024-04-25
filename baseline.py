@@ -215,7 +215,7 @@ if args.save_model:
     os.makedirs(archive_ave, exist_ok=True)
     archive_ave = f'{archive_ave}/{args.epoch}-{args.lr_type}-eta_min{args.eta_min}-m{args.momentum}-wd{args.weight_decay:.0e}-aug{args.train_policy}_ave.pkl'
     archive_ave = get_unique_filename(archive_ave)
-    torch.save(model.state_dict(), archive_ave)
+    torch.save(averaged_model.state_dict(), archive_ave)
     print('Averaged model save to', archive_ave)
 
 print(f'Last accurasy: {test_acc:.2f}')
